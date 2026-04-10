@@ -11,7 +11,8 @@
     <div class="container">
         <!-- Header with Theme Toggle -->
         <header class="header">
-            <h1 class="logo">📊 Productivity Dashboard</h1>
+            <img src="./image/download.png" alt="ini gambar" width="50px">
+            <h1 class="logo">Productivity Dashboard</h1>
             <div class="header-controls">
                 <button id="themeToggle" class="theme-toggle" aria-label="Toggle theme">🌙</button>
             </div>
@@ -26,7 +27,7 @@
                 </div>
                 <div class="greeting">
                     <h2 id="greetingText">Good morning!</h2>
-                    <input type="text" id="userName" placeholder="Enter your name" maxlength="20">
+                    <input type="text" id="userName" placeholder="Enter your name" maxlength="25">
                 </div>
             </div>
         </section>
@@ -36,11 +37,21 @@
             <!-- Focus Timer -->
             <section class="timer-section">
                 <h3>🎯 Focus Timer</h3>
+                <div class="timer-presets">
+                    <button class="preset-btn active" data-minutes="25">25m</button>
+                    <button class="preset-btn" data-minutes="15">15m</button>
+                    <button class="preset-btn" data-minutes="5">5m</button>
+                    <button class="preset-btn" data-minutes="custom">Custom</button>
+                </div>
+                <div class="custom-time-input" id="customTimeInput" style="display:none;">
+                    <input type="number" id="customMinutes" min="1" max="120" placeholder="min" />
+                    <button class="btn btn-primary btn-sm" id="setCustomTime">Set</button>
+                </div>
                 <div class="timer-display" id="timerDisplay">25:00</div>
                 <div class="timer-controls">
-                    <button id="startTimer" class="btn btn-primary">Start</button>
-                    <button id="stopTimer" class="btn btn-secondary" disabled>Stop</button>
-                    <button id="resetTimer" class="btn btn-secondary">Reset</button>
+                    <button id="startTimer" class="btn btn-primary">▶ Start</button>
+                    <button id="stopTimer" class="btn btn-secondary" disabled>⏸ Pause</button>
+                    <button id="resetTimer" class="btn btn-secondary">↺ Reset</button>
                 </div>
             </section>
 
@@ -61,7 +72,14 @@
 
             <!-- To-Do List -->
             <section class="todo-section">
-                <h3>📝 To-Do List <span id="taskCount">0</span></h3>
+                <div class="todo-header">
+                    <h3>📝 To-Do List <span id="taskCount">0</span></h3>
+                    <div class="sort-controls">
+                        <button class="sort-btn active" data-sort="added" title="Sort by date added">🕐</button>
+                        <button class="sort-btn" data-sort="alpha" title="Sort A–Z">🔤</button>
+                        <button class="sort-btn" data-sort="completed" title="Sort by status">✅</button>
+                    </div>
+                </div>
                 <div class="todo-input">
                     <input type="text" id="newTask" placeholder="Add a new task..." maxlength="100">
                     <button id="addTask" class="btn btn-primary">+</button>
@@ -70,6 +88,8 @@
             </section>
         </div>
     </div>
+
+    <div id="toast" class="toast" aria-live="polite"></div>
 
     <script src="js/app.js"></script>
 </body>

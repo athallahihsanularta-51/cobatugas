@@ -2,19 +2,20 @@ class ProductivityDashboard {
     constructor() {
         this.isTimerRunning = false;
         this.timerInterval = null;
-        this.timeLeft = 25 * 60; // 25 minutes in seconds
+        this.pomodoroMinutes = 25;
+        this.timeLeft = 25 * 60;
         this.userName = '';
         this.isDarkMode = false;
         this.tasks = [];
         this.links = [];
-        this.sortOrder = 'added'; // 'added', 'alpha', 'completed'
+        this.sortOrder = 'added';
 
         this.init();
     }
 
     init() {
-        this.loadData();
         this.cacheDOMElements();
+        this.loadData();
         this.bindEvents();
         this.updateTimeDate();
         this.updateGreeting();
@@ -44,7 +45,13 @@ class ProductivityDashboard {
             linksContainer: document.getElementById('linksContainer'),
             linkName: document.getElementById('linkName'),
             linkUrl: document.getElementById('linkUrl'),
-            addLink: document.getElementById('addLink')
+            addLink: document.getElementById('addLink'),
+            customTimeInput: document.getElementById('customTimeInput'),
+            customMinutes: document.getElementById('customMinutes'),
+            setCustomTime: document.getElementById('setCustomTime'),
+            toast: document.getElementById('toast'),
+            presetBtns: document.querySelectorAll('.preset-btn'),
+            sortBtns: document.querySelectorAll('.sort-btn')
         };
     }
 
@@ -64,16 +71,55 @@ class ProductivityDashboard {
         this.elements.stopTimer.addEventListener('click', () => this.stopTimer());
         this.elements.resetTimer.addEventListener('click', () => this.resetTimer());
 
+        // Timer presets
+        this.elements.presetBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const val = btn.dataset.minutes;
+                if (val === 'custom') {
+                    this.elements.customTimeInput.style.display = 'flex';
+                    this.elements.customMinutes.focus();
+                } else {
+                    this.elements.customTimeInput.style.display = 'none';
+                    this.setPomodoro(parseInt(val));
+                }
+                this.elements.presetBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+            });
+        });
+
+        this.elements.setCustomTime.addEventListener('click', () => {
+            const mins = parseInt(this.elements.customMinutes.value);
+            if (mins >= 1 && mins <= 120) {
+                this.setPomodoro(mins);
+                this.elements.customTimeInput.style.display = 'none';
+            } else {
+                this.showToast('Enter a value between 1 and 120 minutes', 'error');
+            }
+        });
+
+        this.elements.customMinutes.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') this.elements.setCustomTime.click();
+        });
+
         // To-do list
         this.elements.addTask.addEventListener('click', () => this.addTask());
         this.elements.newTask.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') this.addTask();
         });
 
+        // Sort buttons
+        this.elements.sortBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                this.sortOrder = btn.dataset.sort;
+                this.elements.sortBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                this.renderTasks();
+                this.saveData();
+            });
+        });
+
         // Quick links
         this.elements.addLink.addEventListener('click', () => this.addLink());
-
-        // Enter key for links
         this.elements.linkName.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') this.elements.linkUrl.focus();
         });
@@ -90,6 +136,7 @@ class ProductivityDashboard {
             tasks: this.tasks,
             links: this.links,
             timeLeft: this.timeLeft,
+            pomodoroMinutes: this.pomodoroMinutes,
             sortOrder: this.sortOrder
         };
         localStorage.setItem('productivityDashboard', JSON.stringify(data));
@@ -104,14 +151,22 @@ class ProductivityDashboard {
                 this.isDarkMode = parsed.isDarkMode || false;
                 this.tasks = parsed.tasks || [];
                 this.links = parsed.links || [];
-                this.timeLeft = parsed.timeLeft || (25 * 60);
+                this.pomodoroMinutes = parsed.pomodoroMinutes || 25;
+                this.timeLeft = parsed.timeLeft || (this.pomodoroMinutes * 60);
                 this.sortOrder = parsed.sortOrder || 'added';
             }
         } catch (e) {
             console.error('Error loading data:', e);
         }
-        // Set username in input field
         this.elements.userName.value = this.userName;
+        // Restore active sort button
+        this.elements.sortBtns.forEach(b => {
+            b.classList.toggle('active', b.dataset.sort === this.sortOrder);
+        });
+        // Restore active preset button
+        this.elements.presetBtns.forEach(b => {
+            b.classList.toggle('active', b.dataset.minutes === String(this.pomodoroMinutes));
+        });
     }
 
     // Time and Date
@@ -135,9 +190,10 @@ class ProductivityDashboard {
         const name = this.userName || 'Friend';
         let greeting = '';
 
-        if (hour < 12) greeting = `Good morning, ${name}!`;
-        else if (hour < 17) greeting = `Good afternoon, ${name}!`;
-        else greeting = `Good evening, ${name}!`;
+        if (hour >= 5 && hour < 12) greeting = `Good Morning, ${name}!`;
+        else if (hour < 17) greeting = `Good Afternoon, ${name}!`;
+        else if (hour < 21) greeting = `Good Evening, ${name}!`;
+        else greeting = `Good Night, ${name}!`;
 
         this.elements.greetingText.textContent = greeting;
     }
@@ -176,9 +232,33 @@ class ProductivityDashboard {
         this.elements.stopTimer.disabled = true;
     }
 
+    // Pomodoro preset setter
+    setPomodoro(minutes) {
+        if (this.isTimerRunning) {
+            this.showToast('Stop the timer before changing duration', 'error');
+            return;
+        }
+        this.pomodoroMinutes = minutes;
+        this.timeLeft = minutes * 60;
+        this.updateTimerDisplay();
+        this.saveData();
+        this.showToast(`Timer set to ${minutes} minutes`);
+    }
+
+    // Toast notification
+    showToast(message, type = 'info') {
+        const toast = this.elements.toast;
+        toast.textContent = message;
+        toast.className = `toast toast-${type} show`;
+        clearTimeout(this._toastTimer);
+        this._toastTimer = setTimeout(() => {
+            toast.classList.remove('show');
+        }, 2800);
+    }
+
     resetTimer() {
         this.stopTimer();
-        this.timeLeft = 25 * 60;
+        this.timeLeft = this.pomodoroMinutes * 60;
         this.updateTimerDisplay();
         this.saveData();
     }
@@ -209,6 +289,15 @@ class ProductivityDashboard {
         const text = this.elements.newTask.value.trim();
         if (!text) return;
 
+        const isDuplicate = this.tasks.some(
+            t => t.text.toLowerCase() === text.toLowerCase()
+        );
+        if (isDuplicate) {
+            this.showToast('Task already exists', 'error');
+            this.elements.newTask.select();
+            return;
+        }
+
         const task = {
             id: Date.now(),
             text: text,
@@ -216,11 +305,12 @@ class ProductivityDashboard {
             createdAt: Date.now()
         };
 
-        this.tasks.unshift(task); // Add to beginning
+        this.tasks.unshift(task);
         this.elements.newTask.value = '';
         this.renderTasks();
         this.updateTaskCount();
         this.saveData();
+        this.showToast('Task added');
     }
 
     toggleTask(id) {
